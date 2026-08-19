@@ -1,31 +1,26 @@
 #!/usr/bin/env node
-const http = require('http');
+const { spawn } = require('child_process');
 const fs = require('fs');
-const { execSync } = require('child_process');
-const PORT = process.env.PORT || 10000;
 
-// 先执行 start.sh（nohup 方式后台启动 sing-box 后立即退出）
-try {
-  execSync('bash start.sh', { stdio: 'inherit', timeout: 120000 });
-} catch(e) {
-  // start.sh 正常退出（没有 tail -f 阻塞）
-}
+// start.sh 在后台运行 （sing-box 独占 $PORT=10000）
+spawn('bash', ['start.sh'], { stdio: 'inherit' });
 
-// 现在可以安全启动 HTTP 服务在 PORT 上（10000）
-http.createServer((req, res) => {
+// 轮询 list.txt 并在控制台打印（Render 日志将捕获）
+let printed = false;
+setInterval(() => {
+  if (printed) return;
   try {
-    const list = fs.readFileSync('.npm/list.txt', 'utf8').trim();
-    if (list) {
-      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end(list);
-    } else {
-      res.writeHead(503);
-      res.end('节点链接文件为空');
+    const d = fs.readFileSync('.npm/list.txt', 'utf-8').trim();
+    if (d) {
+      console.log('\n============================');
+      console.log('🎯 节点链接（复制到节点客户端）');
+      console.log('============================');
+      console.log(d);
+      console.log('============================\n');
+      printed = true;
     }
-  } catch(e) {
-    res.writeHead(503);
-    res.end('节点待生成…');
-  }
-}).listen(PORT, () => {
-  console.log('[server] HTTP on :' + PORT);
-});
+  } catch(e) {}
+}, 3000);
+
+// 保持进程存活
+process.stdin.resume();
