@@ -1,31 +1,26 @@
 #!/usr/bin/env node
-const http = require('http');
 const fs = require('fs');
-const PORT = process.env.PORT || 10000;
-
-// 后台启动 start.sh（不依赖 start.sh 成功与否）
 const { spawn } = require('child_process');
-spawn('bash', ['start.sh'], { stdio: 'ignore', detached: true });
 
-// HTTP 服务：访问 /、/list、/sub 返回节点链接
-http.createServer((req, res) => {
+// 启动 start.sh（它会用 $PORT 跑 sing-box，占 10000）
+spawn('bash', ['start.sh'], { stdio: 'inherit' });
+
+// 不断重试读取 list.txt，拿到就打印
+let printed = false;
+function poll() {
+  if (printed) return;
   try {
-    let body = '';
-    let type = 'text/plain';
-
-    if (req.url === '/sub') {
-      body = fs.readFileSync('.npm/sub.txt', 'utf-8').trim() || '等待生成...';
-    } else {
-      // / 或 /list 返回明文节点
-      body = fs.readFileSync('.npm/list.txt', 'utf-8').trim() || '等待节点生成（约15秒）';
+    const links = fs.readFileSync('.npm/list.txt', 'utf-8').trim();
+    if (links) {
+      console.log('\n========================================');
+      console.log('        节 点 链 接');
+      console.log('========================================');
+      console.log(links);
+      console.log('========================================\n');
+      printed = true;
+      return;
     }
-
-    res.writeHead(200, { 'Content-Type': type + '; charset=utf-8' });
-    res.end(body);
-  } catch (e) {
-    res.writeHead(503);
-    res.end('节点尚未生成，请稍后刷新');
-  }
-}).listen(PORT, () => {
-  console.log('[OK] HTTP on :' + PORT);
-});
+  } catch (_) {}
+  setTimeout(poll, 3000);
+}
+setTimeout(poll, 10000);
