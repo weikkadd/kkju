@@ -2,9 +2,12 @@
 set -e
 
 # ================== 端口设置 ==================
-export TUIC_PORT=${TUIC_PORT:-"28086"}
-export HY2_PORT=${HY2_PORT:-"20032"}
-export REALITY_PORT=${REALITY_PORT:-"28086"}
+# Render/Railway 等平台注入 $PORT (默认 10000) → Reality 默认监听它(唯一对外端口)
+# 其它协议可选, 填了才部署
+export DEFAULT_PORT="${PORT:-10000}"
+export TUIC_PORT=${TUIC_PORT:-""}
+export HY2_PORT=${HY2_PORT:-""}
+export REALITY_PORT=${REALITY_PORT:-"$DEFAULT_PORT"}
 export SOCKS_PORT=${SOCKS_PORT:-""} # 🐾 SOCKS5 端口 (可选, 留空禁用)
 
 # ================== 强制切换到脚本所在目录 ==================
