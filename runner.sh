@@ -7,7 +7,7 @@ LOG=".node/runner.log"
 UUID_F=".node/uid.txt"
 mkdir -p .node .node/public
 
-echo "[$(date)] 开始" >> "$LOG"
+echo "[$(date)] NodeRunner 开始" >> "$LOG"
 
 # UUID 持久化
 if [ -f "$UUID_F" ]; then UUID=$(cat "$UUID_F")
@@ -53,15 +53,17 @@ SB_PID=$!
 echo "sing-box PID=$SB_PID (127.0.0.1:13801)" | tee -a "LOG"
 
 # 启动 cloudflared（隧道到 13801）
-.node/bot tunnel --no-autoupdate --protocol http2 --localhost:13801 >> .node/cf.log 2>&1 &
+.node/bot tunnel --no-autoupdate --protocol http2 --url http://127.0.0.1:13801 >> .node/cf.log 2>&1 &
 CF_IP=$!
 echo "cloudflared PID=$CF_IP" | tee -a "$LOG"
 
 # 等待域名
-sleep 8
-    DOMAIN=$(grep -oE '[a-z0-9]+\.trycloudflare\.com' .node/cf.log 2>/dev/null | head -1)
-    if [ -z "$DOMAIN" ]; then sleep 5 ;  fi
-if [ -z "$DOMAIN" ]; then DOMAIN="隧道获取失败";  fi
+for i in $(seq 1 15); do
+  DOMAIN=$(grep -oE '[a-z0-9-]+\.trycloudflare\.com' .node/cf.log 2>/dev/null | head -1)
+  [ -n "$DOMAIN" ] && break
+  sleep 2
+done
+if [ -z "$DOMAIN" ]; then DOMAIN="隧道失败"; fi
 
 echo "域名: $DOMAIN" | tee -a "$LOG"
 
